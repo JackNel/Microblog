@@ -5,4 +5,10 @@ package com.theironyard;
  */
 public class User {
     String name;
+    String password;
+
+    @Override
+    public String toString() {
+        return (String.format("%s", name));
+    }
 }
