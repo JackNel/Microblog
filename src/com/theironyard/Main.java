@@ -1,6 +1,7 @@
 package com.theironyard;
 
 import spark.ModelAndView;
+import spark.Session;
 import spark.Spark;
 import spark.template.mustache.MustacheTemplateEngine;
 
@@ -10,40 +11,76 @@ import java.util.HashMap;
 public class Main {
 
     public static void main(String[] args) {
-        ArrayList<User> users = new ArrayList();
         ArrayList<Post> posts = new ArrayList();
         Spark.staticFileLocation("/public");
         Spark.init();
         Spark.get(
-                "/posts",
-                ((request1, response1) -> {
+                "/",
+                ((request, response) -> {
+                    Session session = request.session();
+                    String username = session.attribute("username");
+                    if (username == null) {
+                        return new ModelAndView(new HashMap(),"not-logged-in.html");
+                    }
                     HashMap m = new HashMap();
-                    m.put("name", users.get(0));
+                    m.put("username", username);
                     m.put("posts", posts);
-                    return new ModelAndView(m, "posts.html");
+                    return new ModelAndView(m, "logged-in.html");
                 }),
                 new MustacheTemplateEngine()
         );
         Spark.post(
                 "/create-user",
                 ((request, response) -> {
-                    User user = new User();
-                    user.name = request.queryParams("username");
-                    user.password = request.queryParams("password");
-                    users.add(user);
-                    response.redirect("/posts");
-                    return("");
-
+                    String username = request.queryParams("username");
+                    Session session = request.session();
+                    session.attribute("username", username);
+                    response.redirect("/");
+                    return "";
                 })
         );
        Spark.post(
-                "/create-post",
+               "/create-post",
+               ((request, response) -> {
+                   Post post = new Post();
+                   post.id = posts.size() + 1;
+                   post.text = request.queryParams("post");
+                   posts.add(post);
+                   response.redirect("/");
+                   return ("");
+               })
+       );
+        Spark.post(
+                "/delete-post",
                 ((request, response) -> {
-                    Post post = new Post();
-                    post.text = request.queryParams("post");
-                    posts.add(post);
-                    response.redirect("/posts");
-                    return("");
+                    String id = request.queryParams("postid");
+                    try {
+                        int idNum = Integer.valueOf(id);
+                        posts.remove(idNum-1);
+                        for (int i = 0; i < posts.size(); i++) {
+                            posts.get(i).id = i + 1;
+                        }
+                    } catch (Exception e){
+
+                    }
+                    response.redirect("/");
+                    return "";
+                })
+        );
+        Spark.post(
+                "/edit-post",
+                ((request, response) -> {
+                    String editId = request.queryParams("editid");
+                    String edit = request.queryParams("edit");
+                    try {
+                        int editIdNum = Integer.valueOf(editId);
+                        Post editPost = posts.get(editIdNum - 1);
+                        editPost.text = edit;
+                    } catch (Exception e) {
+
+                    }
+                    response.redirect("/");
+                    return "";
                 })
         );
     }
