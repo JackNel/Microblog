@@ -11,8 +11,8 @@ import java.util.HashMap;
 public class Main {
 
     public static void main(String[] args) {
+        HashMap<String, User> users = new HashMap();
         ArrayList<Post> posts = new ArrayList();
-        Spark.staticFileLocation("/public");
         Spark.init();
         Spark.get(
                 "/",
@@ -20,21 +20,26 @@ public class Main {
                     Session session = request.session();
                     String username = session.attribute("username");
                     if (username == null) {
-                        return new ModelAndView(new HashMap(),"not-logged-in.html");
+                        return new ModelAndView(new HashMap(),"/not-logged-in.html");
                     }
                     HashMap m = new HashMap();
                     m.put("username", username);
                     m.put("posts", posts);
-                    return new ModelAndView(m, "logged-in.html");
+                    return new ModelAndView(m, "/logged-in.html");
                 }),
                 new MustacheTemplateEngine()
         );
         Spark.post(
                 "/create-user",
                 ((request, response) -> {
-                    String username = request.queryParams("username");
                     Session session = request.session();
+                    String username = request.queryParams("username");
                     session.attribute("username", username);
+                    if (users.get(username) == null) {
+                        User user = new User();
+                        user.username = username;
+                        users.put(username, user);
+                    }
                     response.redirect("/");
                     return "";
                 })
@@ -42,6 +47,8 @@ public class Main {
        Spark.post(
                "/create-post",
                ((request, response) -> {
+                   Session session = request.session();
+                   String username = session.attribute("username");
                    Post post = new Post();
                    post.id = posts.size() + 1;
                    post.text = request.queryParams("post");
@@ -70,6 +77,9 @@ public class Main {
         Spark.post(
                 "/edit-post",
                 ((request, response) -> {
+                    Session session = request.session();
+                    String username = session.attribute("username");
+
                     String editId = request.queryParams("editid");
                     String edit = request.queryParams("edit");
                     try {
